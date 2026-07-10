@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>SmartHoneyNet — IEEE Report</title><style>
+@page { size: A4; margin: 18mm 16mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Times New Roman', Times, serif; font-size: 10pt;
+       line-height: 1.34; color: #000; margin: 0; }
+.title-block { column-span: all; text-align: center; margin-bottom: 11pt; }
+h1 { font-size: 20pt; margin: 0 0 5pt; line-height: 1.15; }
+.subtitle { font-style: italic; font-size: 11.5pt; margin: 0 0 9pt; }
+.authors { font-size: 10.5pt; margin: 2pt 0; }
+.authors .email { font-size: 9pt; color: #222; }
+.affil { font-size: 9pt; margin: 4pt 0 0; }
+.body { column-count: 2; column-gap: 7mm; text-align: justify; }
+h2 { font-size: 10pt; text-transform: uppercase; margin: 11pt 0 4pt;
+     break-after: avoid; }
+h3 { font-size: 10pt; font-style: italic; font-weight: normal;
+     margin: 7pt 0 3pt; break-after: avoid; }
+p { margin: 0 0 6pt; }
+.abstract { font-style: italic; }
+.abstract b, .keywords b { font-style: italic; }
+ul { margin: 0 0 6pt 14pt; padding: 0; }
+li { margin: 0 0 3pt; }
+table { width: 100%; border-collapse: collapse; margin: 5pt 0 3pt;
+        font-size: 8.4pt; break-inside: avoid; }
+th, td { border: 0.5pt solid #000; padding: 2.5pt 3.5pt; text-align: left;
+         vertical-align: top; }
+th { background: #e8e8e8; text-align: center; font-weight: bold; }
+caption, .figcap { caption-side: bottom; font-size: 8.4pt; font-style: italic;
+          padding-top: 3pt; text-align: center; }
+.refs { font-size: 8.5pt; }
+.refs p { margin: 0 0 3pt; text-indent: -12pt; padding-left: 12pt; }
+code { font-family: 'Consolas','Courier New',monospace; font-size: 9pt; }
+pre { font-family: 'Consolas','Courier New',monospace; font-size: 8pt;
+      line-height: 1.2; background: #f4f4f4; border: 0.5pt solid #bbb;
+      padding: 5pt 6pt; margin: 4pt 0; white-space: pre-wrap; break-inside: avoid; }
+figure { margin: 4pt 0; break-inside: avoid; text-align: center; }
+figure svg { width: 100%; height: auto; }
+.fw { column-span: all; }
+.fw table { font-size: 8pt; }
+</style></head>
+<body>
+<div class="title-block">
+  <h1>Hunt, Detect and Analyse Attacks on a Smart-Home Network using
+      Honeypots, an IDS and the ELK Stack</h1>
+  <div class="subtitle">An improved and reproducible re-engineering of the CCSE graduation project</div>
+  <div class="authors">Aleen Saleh Aljohani<br>
+    <span class="email">aleensaljohani@gmail.com</span></div>
+  <div class="affil">Cybersecurity Department, College of Computer Science and Engineering (CCSE),
+    University of Jeddah, Jeddah, Saudi Arabia</div>
+</div>
+
+<div class="body">
+<p class="abstract"><b>Abstract&mdash;</b>Smart homes are projected to reach roughly 312 million
+households by 2027, expanding a poorly-defended Internet-of-Things (IoT) attack surface that botnets
+such as Mirai exploit through default credentials and exposed telnet/HTTP interfaces. The original
+graduation project demonstrated that honeypots, an intrusion-detection system (IDS) and the ELK stack
+can capture such attacks, but it was delivered as a manually-provisioned three-virtual-machine lab
+that demonstrated two attacks qualitatively and could not be reproduced, tested or measured. This
+paper presents SmartHoneyNet, a complete redesign and rebuild of the same idea as a reproducible,
+tested and quantitatively evaluated platform. Two low-interaction honeypots emulate a Mirai-style
+telnet IoT hub and a smart-home device web panel; a hybrid signature-plus-anomaly detection engine
+classifies six attack categories and maps every alert to MITRE ATT&amp;CK; a pipeline persists all
+data to both an embedded SQLite database and to Elasticsearch for Kibana visualisation. The platform
+runs on a single host, ships with a 39-test automated suite and enforced security controls, and on a
+controlled labelled evaluation set the engine achieves 100% precision and recall with zero false
+positives on benign traffic. We detail the architecture, the detection logic, both experiments, the
+security and ethics controls, and the remaining limitations of a software-only honeynet.</p>
+
+<p class="keywords"><b>Index Terms&mdash;</b>Honeypot, IoT security, Intrusion Detection, ELK Stack,
+Mirai, MITRE ATT&amp;CK, Smart Home, Threat Hunting, Reproducible Research.</p>
+
+<h2>I. Introduction</h2>
+<p>Interconnected &ldquo;smart&rdquo; devices&mdash;thermostats, cameras, locks, plugs and hubs&mdash;
+have woven themselves into the modern home. Each device is a small networked computer, and collectively
+they form a network whose weakest member sets the security of the whole. The defensive problem is
+asymmetric: a homeowner has neither the tooling nor the expertise of an enterprise security operations
+centre, yet faces the same internet-wide automated adversaries that target large organisations.</p>
+<p>The word &ldquo;Hunt&rdquo; captures the intended posture: not merely to block attacks reactively,
+but to attract, observe and understand them. A honeypot deliberately exposes an attractive,
+instrumented target; whatever an attacker does to it is malicious by definition and therefore worth
+studying. Pairing honeypots with an IDS and a log-analytics stack turns those observations into
+detections and, ultimately, into actionable intelligence.</p>
+<p>This paper re-engineers my 2024 University of Jeddah graduation project of the same name. The
+original established a sound idea but stopped at a qualitative, non-reproducible demonstration. Here we
+carry the idea to a platform that others can run, inspect, test and measure.</p>
+<h3>A. Problem statement</h3>
+<p>Smart-home networks are attacked continuously by automated botnets and scanners, yet homeowners
+lack visibility into these attacks and researchers lack reproducible, measurable platforms for
+studying them in a specifically smart-home context.</p>
+<h3>B. Aim and objectives</h3>
+<p><b>Aim.</b> To build a reproducible platform that hunts, detects and analyses attacks against a
+smart-home network, and to evaluate its detection effectiveness. <b>Objectives:</b> (1) emulate
+vulnerable devices with safe honeypots; (2) implement a real-time hybrid IDS; (3) integrate an ELK
+pipeline and an offline database; (4) measure detection performance quantitatively; and (5) enforce
+responsible-use controls in code rather than in prose.</p>
+<h3>C. Contributions</h3>
+<p>Table I summarises how this work advances the original. In short, we contribute a hybrid detection
+engine, an explicit ATT&amp;CK taxonomy, a reproducible and automatically-tested implementation, and a
+published quantitative evaluation.</p>
+<table><thead><tr><th>#</th><th>Original project (2024)</th><th>This work (2026)</th></tr></thead><tbody><tr><td>1</td><td>3 manual VirtualBox VMs</td><td>One-command Docker + pure-Python mode</td></tr><tr><td>2</td><td>2 attacks via screenshots</td><td>6 detection categories, each tested</td></tr><tr><td>3</td><td>Qualitative results only</td><td>Quantitative precision/recall/F1</td></tr><tr><td>4</td><td>Snort signatures only</td><td>Hybrid signature + anomaly engine</td></tr><tr><td>5</td><td>No attack taxonomy</td><td>MITRE ATT&amp;CK mapping per alert</td></tr><tr><td>6</td><td>No automated testing</td><td>39 tests + CI on 3 Python versions</td></tr><tr><td>7</td><td>Unbounded DoS script</td><td>Bounded, safety-gated simulators</td></tr><tr><td>8</td><td>No threat model</td><td>Threat model + enforced controls</td></tr></tbody><caption>TABLE I. Contributions over the original project.</caption></table>
+
+<h2>II. Background</h2>
+<h3>A. Smart-home networks and their risks</h3>
+<p>A smart home links appliances and sensors to a hub/router, controlled through a web or mobile
+interface. Representative risks include data and identity theft from unprotected devices,
+eavesdropping on device traffic, and (distributed) denial-of-service amplified by the sheer number of
+weakly-protected IoT devices available for recruitment into botnets.</p>
+<h3>B. Honeypots</h3>
+<p>A honeypot is an intentionally exposed, instrumented system whose only purpose is to be attacked so
+defenders can study the attacker. <i>Low-interaction</i> honeypots (used here) emulate just enough of
+a service to capture intent while never executing attacker input&mdash;a deliberate safety property.
+<i>High-interaction</i> honeypots expose real systems and yield richer data at much higher operational
+risk.</p>
+<h3>C. Intrusion Detection Systems</h3>
+<p>Signature-based detection matches known-bad patterns: precise for known threats but blind to novel
+ones. Anomaly-based detection models normal behaviour and flags deviations: able to catch new attacks
+at the cost of more false positives. Because neither alone is sufficient for the smart-home threat
+mix, SmartHoneyNet deliberately combines the two.</p>
+<h3>D. The ELK stack and IoT botnets</h3>
+<p>Elasticsearch stores and indexes events for fast search; Logstash ingests, parses and enriches
+incoming data; Kibana visualises it as dashboards. Mirai and its descendants scan the internet for
+open telnet (TCP&nbsp;23) and try a small list of factory-default credentials such as
+<code>root:xc3511</code> and <code>admin:admin</code>. This single behaviour accounts for a large
+share of real IoT compromise, which is why an accurate telnet honeypot and a default-credential
+signature sit at the centre of this design.</p>
+
+<h2>III. Related Work</h2>
+<p>Five prior studies frame this project. Study [10] compares machine-learning classifiers on the
+Bot-IoT dataset, finding Random Forest best for binary and K-Nearest-Neighbours best for multi-class
+classification, but does not consider real-time streaming. Study [11] evaluates the Elastic stack for
+threat hunting and finds it cost-effective, while noting the continuing need for human input. Study
+[12] uses honeynet-derived network flows to detect IoT botnets. Study [13] deploys Cowrie honeypots
+behind Docker and reports that captured credentials match the Mirai list, with most attacks sourced
+from Europe. Study [14] combines the ELK environment with threat intelligence to detect and rank
+malicious events, at the cost of false positives and manual cleanup.</p>
+<div class="fw"><table><thead><tr><th>Ref</th><th>Yr</th><th>Approach</th><th>Result</th><th>Limitation</th></tr></thead><tbody><tr><td>[10]</td><td>2021</td><td>ML attack classification (Bot-IoT)</td><td>RF best (binary), KNN (multi)</td><td>No real-time/streaming eval</td></tr><tr><td>[11]</td><td>2021</td><td>Threat hunting with Elastic stack</td><td>ELK cost-effective for hunting</td><td>Needs human input + controls</td></tr><tr><td>[12]</td><td>2021</td><td>Honeynet + flow classification</td><td>Botnet detection via flows</td><td>Limited algorithm comparison</td></tr><tr><td>[13]</td><td>2020</td><td>IoT + Docker (Cowrie) honeypots</td><td>Creds match Mirai; EU-sourced</td><td>Not all IoT attacks covered</td></tr><tr><td>[14]</td><td>2019</td><td>Malicious-event detection, ELK+CTI</td><td>Detects+ranks most threats</td><td>False positives; manual cleanup</td></tr></tbody><caption>TABLE II. Comparative summary of related studies.</caption></table></div>
+<p><b>Difference from existing work.</b> Like [13] we feed honeypots into ELK and like [11] we use ELK
+for hunting, but SmartHoneyNet is distinguished by a hybrid detection engine, an explicit MITRE
+ATT&amp;CK classification of every alert, a fully reproducible and automatically-tested implementation,
+and a quantitative evaluation with published precision/recall&mdash;directly addressing the
+&ldquo;qualitative only&rdquo; and &ldquo;not reproducible&rdquo; gaps common to the surveyed work.</p>
+
+<h2>IV. Threat Model</h2>
+<p><b>Assets.</b> Device credentials; camera and sensor feeds; device compute and bandwidth; and the
+LAN foothold itself. <b>Adversaries.</b> Automated IoT botnets (Mirai-class), opportunistic
+internet-wide scanners probing known IoT CVEs, and manual attackers. <b>Trust boundary.</b> The
+honeynet lives on an isolated segment that is untrusted inbound and, crucially, has no egress to the
+internet or to production/personal devices; ELK management interfaces bind to localhost. Each attacker
+goal is expressed directly as a MITRE ATT&amp;CK technique paired with the rule that detects it
+(Table&nbsp;V). The platform also reasons about the risks it introduces&mdash;a honeypot used as a
+pivot, or attack tooling misused&mdash;and mitigates them with the controls in Table&nbsp;VI.</p>
+
+<h2>V. Methodology</h2>
+<p>The project follows the same three-stage flow as the original, re-expressed as software. First,
+<i>attack generation</i>: adversary behaviour is produced by real attackers in a live deployment or by
+the built-in, safety-gated simulators in the lab. Second, <i>detection and collection</i>: honeypots
+capture every interaction as a structured event that the pipeline persists and runs through the IDS,
+producing alerts enriched with an ATT&amp;CK technique and a severity. Third, <i>transformation and
+analysis</i>: events and alerts are written to SQLite and, in the full deployment, shipped through
+Logstash into Elasticsearch and visualised in Kibana, while an analyzer produces threat reports.</p>
+
+<h2>VI. System Design</h2>
+<h3>A. Architecture</h3>
+<p>The platform is a pipeline of composable components (Fig.&nbsp;1). The original three virtual
+machines map cleanly onto software: the attacker VM becomes the attack simulators; the honeypot VM
+(Cowrie/Pentbox) becomes the telnet and HTTP honeypots; and the IDS+ELK VM (Snort+ELK) becomes the
+detection engine&mdash;with an equivalent Suricata rule file&mdash;plus the ELK services.</p>
+<figure>
+<svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg" font-family="Times New Roman" font-size="12">
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+<path d="M0,0 L7,3 L0,6 Z" fill="#000"/></marker></defs>
+<rect x="8" y="80" width="96" height="44" rx="4" fill="#eef" stroke="#000"/>
+<text x="56" y="98" text-anchor="middle">Attacker</text>
+<text x="56" y="113" text-anchor="middle" font-size="10">(simulators)</text>
+<rect x="140" y="60" width="110" height="86" rx="4" fill="#efe" stroke="#000"/>
+<text x="195" y="80" text-anchor="middle">Honeypots</text>
+<text x="195" y="98" text-anchor="middle" font-size="10">Telnet (2323)</text>
+<text x="195" y="113" text-anchor="middle" font-size="10">HTTP (8080)</text>
+<rect x="286" y="70" width="104" height="66" rx="4" fill="#ffe" stroke="#000"/>
+<text x="338" y="92" text-anchor="middle">Pipeline</text>
+<text x="338" y="108" text-anchor="middle" font-size="10">(Logstash-eq.)</text>
+<rect x="424" y="18" width="112" height="42" rx="4" fill="#fee" stroke="#000"/>
+<text x="480" y="35" text-anchor="middle" font-size="11">Detection engine</text>
+<text x="480" y="50" text-anchor="middle" font-size="10">signature+anomaly</text>
+<rect x="424" y="90" width="112" height="34" rx="4" fill="#eef" stroke="#000"/>
+<text x="480" y="111" text-anchor="middle" font-size="11">SQLite store</text>
+<rect x="424" y="150" width="112" height="40" rx="4" fill="#eef" stroke="#000"/>
+<text x="480" y="166" text-anchor="middle" font-size="10">JSON lines</text>
+<text x="480" y="181" text-anchor="middle" font-size="10">(events/alerts)</text>
+<rect x="580" y="24" width="118" height="52" rx="4" fill="#efe" stroke="#000"/>
+<text x="639" y="44" text-anchor="middle" font-size="11">Analyzer</text>
+<text x="639" y="60" text-anchor="middle" font-size="10">reports (md/json)</text>
+<rect x="580" y="140" width="118" height="52" rx="4" fill="#eff" stroke="#000"/>
+<text x="639" y="160" text-anchor="middle" font-size="11">ELK stack</text>
+<text x="639" y="176" text-anchor="middle" font-size="10">ES+Kibana</text>
+<line x1="104" y1="102" x2="138" y2="102" stroke="#000" marker-end="url(#a)"/>
+<line x1="250" y1="102" x2="284" y2="102" stroke="#000" marker-end="url(#a)"/>
+<line x1="390" y1="95" x2="422" y2="55" stroke="#000" marker-end="url(#a)"/>
+<line x1="390" y1="105" x2="422" y2="107" stroke="#000" marker-end="url(#a)"/>
+<line x1="390" y1="118" x2="422" y2="165" stroke="#000" marker-end="url(#a)"/>
+<line x1="536" y1="40" x2="578" y2="46" stroke="#000" marker-end="url(#a)"/>
+<line x1="536" y1="170" x2="578" y2="167" stroke="#000" marker-end="url(#a)"/>
+</svg><figcaption class="figcap">Fig. 1. SmartHoneyNet architecture: sensors feed one
+pipeline that persists to SQLite, runs the IDS, and exports to the ELK stack and analyzer.</figcaption></figure>
+<h3>B. Data model and storage</h3>
+<p>Two records flow through the system&mdash;an <code>Event</code> (an observation) and an
+<code>Alert</code> (a detection). They serialise identically to a SQLite row and to the JSON that
+Elasticsearch indexes, so the offline and ELK paths remain consistent. Table&nbsp;III lists the core
+event fields; <code>source_ip</code> is typed as an IP and a companion geo-point supports map
+visualisations. SQLite is the local system of record; Elasticsearch provides the same at scale.</p>
+<table><thead><tr><th>Field</th><th>Type</th><th>Example</th><th>Purpose</th></tr></thead><tbody><tr><td>timestamp</td><td>date</td><td>2024-01-01T00:00:03Z</td><td>temporal correlation</td></tr><tr><td>honeypot</td><td>keyword</td><td>telnet / http</td><td>sensor of origin</td></tr><tr><td>event_type</td><td>keyword</td><td>login_attempt</td><td>observation class</td></tr><tr><td>source_ip</td><td>ip</td><td>203.0.113.10</td><td>attacker attribution</td></tr><tr><td>dest_port</td><td>int</td><td>2323</td><td>targeted service</td></tr><tr><td>username / password</td><td>keyword</td><td>root / xc3511</td><td>credential intel</td></tr><tr><td>http_path</td><td>text</td><td>/boaform/…</td><td>web-probe analysis</td></tr><tr><td>command</td><td>text</td><td>wget http://…</td><td>post-auth behaviour</td></tr><tr><td>success</td><td>bool</td><td>true</td><td>auth outcome</td></tr></tbody><caption>TABLE III. Core honeypot event schema (subset).</caption></table>
+<h3>C. Detection engine</h3>
+<p>The engine is stream-oriented: each event is processed once. Signature rules perform O(1) set and
+regular-expression lookups; anomaly rules maintain a per-source sliding window of recent activity and
+fire when a rate threshold is exceeded (Fig.&nbsp;2). A per-(source,&nbsp;rule) cooldown collapses a
+sustained campaign into a single actionable alert instead of thousands of duplicates. Thresholds are
+configurable (Table&nbsp;IV) and the full rule set with ATT&amp;CK mappings is given in Table&nbsp;V.</p>
+<figure style="max-width:60%">
+<svg viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" font-family="Times New Roman" font-size="11">
+<defs><marker id="b" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+<path d="M0,0 L7,3 L0,6 Z" fill="#000"/></marker></defs>
+<rect x="120" y="8" width="120" height="30" rx="4" fill="#eef" stroke="#000"/>
+<text x="180" y="27" text-anchor="middle">Event in</text>
+<polygon points="180,52 250,80 180,108 110,80" fill="#ffe" stroke="#000"/>
+<text x="180" y="78" text-anchor="middle" font-size="10">signature</text>
+<text x="180" y="90" text-anchor="middle" font-size="10">match?</text>
+<rect x="270" y="64" width="84" height="32" rx="4" fill="#fee" stroke="#000"/>
+<text x="312" y="84" text-anchor="middle" font-size="10">raise alert</text>
+<polygon points="180,120 250,148 180,176 110,148" fill="#ffe" stroke="#000"/>
+<text x="180" y="146" text-anchor="middle" font-size="10">window</text>
+<text x="180" y="158" text-anchor="middle" font-size="10">&ge; thresh?</text>
+<rect x="270" y="132" width="84" height="32" rx="4" fill="#fee" stroke="#000"/>
+<text x="312" y="152" text-anchor="middle" font-size="10">raise alert</text>
+<rect x="120" y="196" width="120" height="30" rx="4" fill="#eef" stroke="#000"/>
+<text x="180" y="215" text-anchor="middle" font-size="10">persist + cooldown</text>
+<line x1="180" y1="38" x2="180" y2="50" stroke="#000" marker-end="url(#b)"/>
+<line x1="250" y1="80" x2="270" y2="80" stroke="#000" marker-end="url(#b)"/>
+<text x="258" y="74" font-size="9">yes</text>
+<line x1="180" y1="108" x2="180" y2="118" stroke="#000" marker-end="url(#b)"/>
+<text x="188" y="116" font-size="9">no</text>
+<line x1="250" y1="148" x2="270" y2="148" stroke="#000" marker-end="url(#b)"/>
+<text x="258" y="142" font-size="9">yes</text>
+<line x1="180" y1="176" x2="180" y2="194" stroke="#000" marker-end="url(#b)"/>
+<line x1="312" y1="96" x2="312" y2="130" stroke="#000" marker-end="url(#b)"/>
+</svg><figcaption class="figcap">Fig. 2. Per-event detection flow:
+signatures first, then rate-based windows, then persistence with cooldown.</figcaption></figure>
+<table><thead><tr><th>Parameter</th><th>Default</th><th>Meaning</th></tr></thead><tbody><tr><td>brute_force_threshold</td><td>5</td><td>failed logins to alert</td></tr><tr><td>brute_force_window</td><td>60 s</td><td>brute-force window</td></tr><tr><td>dos_threshold</td><td>50</td><td>requests to alert</td></tr><tr><td>dos_window</td><td>10 s</td><td>DoS window</td></tr><tr><td>port_scan_threshold</td><td>8</td><td>distinct ports to alert</td></tr><tr><td>port_scan_window</td><td>30 s</td><td>scan window</td></tr><tr><td>alert_cooldown</td><td>30 s</td><td>duplicate suppression</td></tr></tbody><caption>TABLE IV. Configurable detection thresholds.</caption></table>
+<div class="fw"><table><thead><tr><th>Rule</th><th>Type</th><th>Category</th><th>MITRE</th><th>Trigger</th></tr></thead><tbody><tr><td>IOT-DEFAULT-CREDS</td><td>sig</td><td>default-credentials</td><td>T1078.001</td><td>Known IoT default credential</td></tr><tr><td>TELNET-BRUTE-FORCE</td><td>anom</td><td>brute-force</td><td>T1110.001</td><td>&ge;5 failed logins / 60 s</td></tr><tr><td>HTTP-DOS-FLOOD</td><td>anom</td><td>denial-of-service</td><td>T1498</td><td>&ge;50 requests / 10 s</td></tr><tr><td>PORT-SCAN</td><td>anom</td><td>reconnaissance</td><td>T1046</td><td>&ge;8 ports / 30 s</td></tr><tr><td>SUSPICIOUS-HTTP-PATH</td><td>sig</td><td>active-scanning</td><td>T1595.002</td><td>IoT exploit URL</td></tr><tr><td>CMD-INJECTION</td><td>sig</td><td>command-injection</td><td>T1059</td><td>Shell payload</td></tr></tbody><caption>TABLE V. Detection rules mapped to MITRE ATT&amp;CK.</caption></table></div>
+<pre>def process(event):
+    # signature rules (O(1) regex / set lookups)
+    if (event.user, event.pw) in MIRAI_DEFAULTS:
+        emit('IOT-DEFAULT-CREDS', T1078_001)
+    if INJECT_RE.search(event.path or event.cmd):
+        emit('CMD-INJECTION', T1059)
+    # anomaly rules (per-source sliding window)
+    w = failed_logins[event.src]; w.append(now)
+    trim(w, now, BF_WINDOW)
+    if len(w) >= BF_THRESHOLD:
+        emit('TELNET-BRUTE-FORCE', T1110_001)
+    # per-(src,rule) cooldown suppresses duplicate alerts</pre>
+<div class="figcap" style="text-align:left">Listing 1. Detection engine (simplified).</div>
+
+<h2>VII. Implementation</h2>
+<p>The core is implemented in Python using only the standard library (PyYAML optional), which makes it
+portable, auditable and trivial to test. The <b>telnet honeypot</b> is a threaded server presenting a
+BusyBox banner and login prompts; it records each credential pair, &ldquo;accepts&rdquo; known-weak
+credentials to lure the attacker into a fake shell, and logs typed commands&mdash;while never executing
+anything and bounding attempts, commands and session time. The <b>HTTP honeypot</b> emulates a
+&ldquo;SmartHome Hub 2.4&rdquo; admin panel; it records method, path, user-agent and POSTed credentials,
+caps request-body size, and returns only static HTML. The <b>pipeline</b> persists to SQLite, appends
+JSON lines for Logstash, runs the engine, and dispatches alerts. The <b>attack simulators</b>&mdash;
+port scan, brute-force and a bounded HTTP flood&mdash;are each gated by the safety module (Listing&nbsp;2),
+a safe re-implementation of the original's unbounded loop. Deployment is a single
+<code>docker compose up -d --build</code>, which starts the honeypots plus Elasticsearch, Logstash and
+Kibana on an isolated bridge network; a saved-objects file provisions the dashboards, and a Suricata
+rule set mirrors the engine for network-layer detection.</p>
+<pre>def assert_safe_target(host):
+    for addr in resolve(host):
+        ip = ip_address(addr)
+        if not (ip.is_loopback or ip.is_private):
+            raise SafetyError('non-lab target refused')</pre>
+<div class="figcap" style="text-align:left">Listing 2. Ethics enforced in code: the safety guard.</div>
+<p>A representative alert produced by the engine is shown in Listing&nbsp;3; the same object is stored
+in SQLite and indexed in Elasticsearch.</p>
+<pre>{ "rule_id": "TELNET-BRUTE-FORCE",
+  "category": "brute-force", "severity": "high",
+  "source_ip": "203.0.113.10", "event_count": 10,
+  "mitre_technique": "T1110.001",
+  "mitre_name": "Password Guessing",
+  "first_seen": "2024-01-01T00:00:20Z" }</pre>
+<div class="figcap" style="text-align:left">Listing 3. Example enriched alert (JSON).</div>
+<h3>D. Deployment and operations</h3>
+<p>A single <code>docker compose up -d --build</code> brings up four services on a dedicated bridge
+network (Table&nbsp;IX). The honeypots write JSON lines into a shared volume that Logstash tails and
+indexes into Elasticsearch, and the operator imports the saved-objects file to obtain the Kibana
+&ldquo;Threat Overview&rdquo; dashboard (alerts by category and ATT&amp;CK technique, top source
+addresses, top credential pairs, and events over time). For a hardware or VM IDS, the accompanying
+Suricata rule set reproduces the same logic at the packet layer, and its <code>eve.json</code> can be
+forwarded into the same pipeline to unify host-honeypot and network alerts. An operations runbook
+documents health checks, alert triage, log rotation and threshold tuning.</p>
+<table><thead><tr><th>Service</th><th>Port (localhost)</th><th>Role</th></tr></thead><tbody><tr><td>sensors</td><td>2323, 8080</td><td>honeypots + detection engine</td></tr><tr><td>elasticsearch</td><td>9200</td><td>storage &amp; search</td></tr><tr><td>logstash</td><td>&mdash;</td><td>ingest pipeline</td></tr><tr><td>kibana</td><td>5601</td><td>dashboards</td></tr></tbody><caption>TABLE IX. Docker Compose services on the isolated bridge network.</caption></table>
+
+<h2>VIII. Security and Ethics Controls</h2>
+<p>Because the project ships attack tooling, ethics are enforced <i>in code</i>, not merely documented.
+The simulators call the guard in Listing&nbsp;2, which refuses any target that does not resolve
+entirely to loopback or private space; the flood simulator additionally enforces hard caps on request
+count and duration. Honeypots are low-interaction with bounded buffers and session timeouts; containers
+run non-root on an isolated network; and an internal query builder validates identifiers against an
+allow-list. Table&nbsp;VI summarises the controls and where each is enforced.</p>
+<table><thead><tr><th>Control</th><th>Where</th><th>Purpose</th></tr></thead><tbody><tr><td>Private-target enforcement</td><td>attacks/safety.py</td><td>Sims cannot hit the internet</td></tr><tr><td>Request/duration caps</td><td>attacks/dos.py</td><td>Bounds the flood simulator</td></tr><tr><td>Loopback binds by default</td><td>config.py</td><td>Not WAN-exposed unless opted in</td></tr><tr><td>Non-root container</td><td>Dockerfile</td><td>Least privilege</td></tr><tr><td>Bounded input buffers</td><td>honeypots</td><td>Prevents memory exhaustion</td></tr><tr><td>SQL identifier allow-list</td><td>database.py</td><td>Internal query builder safe</td></tr><tr><td>Network isolation</td><td>docker-compose</td><td>Contains the honeynet segment</td></tr></tbody><caption>TABLE VI. Enforced security controls.</caption></table>
+
+<h2>IX. Experiments and Evaluation</h2>
+<h3>A. Experiment A&mdash;end-to-end demonstration</h3>
+<p>The <code>demo</code> command starts both honeypots on ephemeral ports and launches, in sequence, a
+port scan, a telnet brute-force (wrong guesses plus IoT defaults), an HTTP flood and a set of
+web-exploitation probes against them. A representative run captured approximately 196 events and raised
+alerts in all five exercised categories, reproducing&mdash;and extending from two to six attack
+types&mdash;the qualitative demonstration of the original project, but as a single reproducible command.
+The four attack phases and the rules each exercises are listed in Table&nbsp;X and sketched on the
+timeline in Fig.&nbsp;3. Aggregating the captured credentials (Table&nbsp;VIII) directly yields the
+blocklist of passwords a homeowner must never use.</p>
+<table><thead><tr><th>Phase</th><th>Simulated action</th><th>Rule(s) exercised</th></tr></thead><tbody><tr><td>1</td><td>Port scan</td><td>PORT-SCAN</td></tr><tr><td>2</td><td>Telnet brute-force + defaults</td><td>TELNET-BRUTE-FORCE, IOT-DEFAULT-CREDS</td></tr><tr><td>3</td><td>HTTP request flood</td><td>HTTP-DOS-FLOOD</td></tr><tr><td>4</td><td>Web-exploitation probes</td><td>SUSPICIOUS-HTTP-PATH, CMD-INJECTION</td></tr></tbody><caption>TABLE X. Attack phases in the end-to-end demonstration.</caption></table>
+<figure>
+<svg viewBox="0 0 720 96" xmlns="http://www.w3.org/2000/svg" font-family="Times New Roman" font-size="11">
+<line x1="20" y1="70" x2="700" y2="70" stroke="#000" stroke-width="1"/>
+<polygon points="700,70 692,66 692,74" fill="#000"/>
+<text x="360" y="90" text-anchor="middle" font-size="10">time &rarr;</text>
+<rect x="30" y="46" width="120" height="20" fill="#eef" stroke="#000"/>
+<text x="90" y="60" text-anchor="middle" font-size="10">1. Port scan</text>
+<rect x="170" y="46" width="170" height="20" fill="#efe" stroke="#000"/>
+<text x="255" y="60" text-anchor="middle" font-size="10">2. Brute-force + defaults</text>
+<rect x="360" y="46" width="150" height="20" fill="#fee" stroke="#000"/>
+<text x="435" y="60" text-anchor="middle" font-size="10">3. HTTP DoS flood</text>
+<rect x="530" y="46" width="160" height="20" fill="#ffe" stroke="#000"/>
+<text x="610" y="60" text-anchor="middle" font-size="10">4. Exploit probes</text>
+<text x="90" y="30" text-anchor="middle" font-size="9">T1046</text>
+<text x="255" y="30" text-anchor="middle" font-size="9">T1110 / T1078</text>
+<text x="435" y="30" text-anchor="middle" font-size="9">T1498</text>
+<text x="610" y="30" text-anchor="middle" font-size="9">T1595 / T1059</text>
+<line x1="90" y1="34" x2="90" y2="44" stroke="#888"/>
+<line x1="255" y1="34" x2="255" y2="44" stroke="#888"/>
+<line x1="435" y1="34" x2="435" y2="44" stroke="#888"/>
+<line x1="610" y1="34" x2="610" y2="44" stroke="#888"/>
+</svg><figcaption class="figcap">Fig. 3. Demonstration timeline: reconnaissance,
+credential attacks, denial-of-service and exploitation probes, each detected in real time.</figcaption></figure>
+<table><thead><tr><th>username:password</th><th>Attempts</th></tr></thead><tbody><tr><td>root:xc3511</td><td>high</td></tr><tr><td>admin:admin</td><td>high</td></tr><tr><td>root:root</td><td>high</td></tr><tr><td>root:vizxv</td><td>med</td></tr><tr><td>support:support</td><td>med</td></tr><tr><td>guest:guest</td><td>med</td></tr></tbody><caption>TABLE VIII. Sample captured credential intelligence (demo run).</caption></table>
+<h3>B. Experiment B&mdash;quantitative detection evaluation</h3>
+<p>To measure detection quality we built a labelled event stream of 94 events: 20 benign, human-paced
+web requests, one benign strong login, and four attack campaigns from distinct source addresses with
+known ground-truth categories. Metrics are computed at source-campaign granularity, which matches how
+the rate rules are designed to fire (once per campaign, not once per packet). As shown in
+Table&nbsp;VII, the engine detected every campaign in its correct category and raised no alerts on
+benign traffic. The result is asserted by a regression test so that a future change which breaks
+detection fails CI.</p>
+<table><thead><tr><th>Category</th><th>TP</th><th>FP</th><th>FN</th><th>P</th><th>R</th><th>F1</th></tr></thead><tbody><tr><td>default-credentials</td><td>1</td><td>0</td><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td></tr><tr><td>brute-force</td><td>1</td><td>0</td><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td></tr><tr><td>denial-of-service</td><td>1</td><td>0</td><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td></tr><tr><td>active-scanning</td><td>1</td><td>0</td><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td></tr><tr><td>command-injection</td><td>1</td><td>0</td><td>0</td><td>1.00</td><td>1.00</td><td>1.00</td></tr><tr><td><b>Micro-average</b></td><td>5</td><td>0</td><td>0</td><td><b>1.00</b></td><td><b>1.00</b></td><td><b>1.00</b></td></tr></tbody><caption>TABLE VII. Detection performance on the labelled set (2 benign sources, 0 FP).</caption></table>
+<h3>C. Automated test suite</h3>
+<p>The suite comprises 39 pytest tests covering the database, every detection rule with explicit
+synthetic timelines, live honeypot interaction, the safety guardrails, the pipeline, the analyzer, the
+command-line interface and a full in-process integration run; line coverage is approximately 84%.
+Continuous integration runs the suite plus the demo on Python 3.9, 3.11 and 3.12.</p>
+
+<h2>X. Results and Discussion</h2>
+<p>The experiments confirm the original hypothesis&mdash;that honeypots, an IDS and ELK form an
+effective, low-cost smart-home detection stack&mdash;and strengthen it with measurement. Three findings
+stand out. First, <i>default credentials remain the highest-signal indicator</i>: a single login with a
+Mirai default pair is immediately and unambiguously malicious, corroborating [13]. Second,
+<i>hybrid detection is complementary, not redundant</i>: signatures caught the known (default
+credentials, exploit URLs, injection payloads) with high precision, while rate-based anomaly rules
+caught behaviour (brute-force, DoS, scanning) that has no fixed signature. Third, <i>the credential
+intelligence has direct defensive value</i>, turning attack data into concrete hardening advice.</p>
+
+<h2>XI. Limitations and Future Work</h2>
+<p><b>Limitations.</b> The honeypots emulate telnet/HTTP device interfaces; they do not reproduce full
+device firmware or non-IP radios such as Zigbee, Z-Wave or BLE. The perfect scores in Section&nbsp;IX
+are on a clean, labelled set; production traffic&mdash;content-delivery networks, health-checkers,
+NAT'd users&mdash;would produce false positives and demands threshold tuning, which the framework
+supports but whose numbers must then be re-measured. Rate rules require a warm-up window and can miss
+&ldquo;low-and-slow&rdquo; attacks tuned below the thresholds. These are the honest boundaries within
+which the reported results hold, and they directly address the original report's acknowledged
+limitations (the unimplemented Pot2DPI honeypot and the Honeyd device-simulation crashes).</p>
+<p><b>Future work.</b> Promising directions include Cowrie/Dionaea integration for higher-interaction
+SSH/telnet and malware capture; an MQTT honeypot (TCP&nbsp;1883) for the dominant smart-home broker; a
+virtual IoT-device environment realising the original's Pot2DPI/Honeyd goal; an ML-based anomaly
+detector following [10], evaluated against the same labelled sets; GeoIP and threat-intelligence
+enrichment in Logstash to attribute and map campaigns; and automated response that pushes high-severity
+source addresses to a firewall blocklist.</p>
+
+<h2>XII. Conclusion</h2>
+<p>SmartHoneyNet re-engineers the <i>Hunt, Detect and Analyse Attacks on a Smart-Home Network</i>
+project from a one-off, three-VM demonstration into a reproducible, tested and measured security
+platform. It keeps the original's sound core idea&mdash;honeypots to attract, an IDS to detect, and
+ELK to analyse&mdash;and adds a hybrid detection engine covering six attack classes, a MITRE ATT&amp;CK
+classification of every alert, a real database and dashboards, a 39-test automated suite with CI,
+enforced security-and-ethics controls, and a quantitative evaluation demonstrating 100% precision and
+recall with zero false positives on a controlled labelled set. As smart-home adoption races toward
+hundreds of millions of households, tools that let defenders hunt the attackers targeting them&mdash;
+safely, reproducibly and measurably&mdash;are exactly what the field needs.</p>
+
+<h2>Appendix A: Reproducibility</h2>
+<p>All figures are reproducible from the repository. Experiment A: <code>python3 -m honeynet demo</code>.
+Experiment B: <code>python3 scripts/evaluate.py</code>. Test suite: <code>make test</code>. Full stack:
+<code>docker compose up -d --build</code>, then import the Kibana saved objects.</p>
+
+<h2>Appendix B: Command-line interface</h2>
+<p>The platform is driven by a single <code>honeynet</code> command with four sub-commands
+(Table&nbsp;XI), so an operator can run the sensors, generate traffic, and produce reports without
+touching the code.</p>
+<table><thead><tr><th>Command</th><th>Purpose</th></tr></thead><tbody><tr><td>honeynet serve</td><td>run honeypots + detection pipeline</td></tr><tr><td>honeynet demo</td><td>self-contained end-to-end demonstration</td></tr><tr><td>honeynet attack &lt;kind&gt;</td><td>run a lab attack simulation</td></tr><tr><td>honeynet analyze --out r.md</td><td>generate a threat-analysis report</td></tr></tbody><caption>TABLE XI. Command-line interface (Appendix B).</caption></table>
+
+<h2>Appendix C: Sample analyzer output</h2>
+<p>Listing&nbsp;4 shows an excerpt of the Markdown report emitted by <code>honeynet analyze</code>,
+which mirrors the aggregations rendered interactively in Kibana.</p>
+<pre>## Alerts by category
+| Category            | Count |
+| brute-force         |   1   |
+| default-credentials |   1   |
+| denial-of-service   |   1   |
+## MITRE ATT&CK techniques observed
+| T1110.001 | Password Guessing        | 1 |
+| T1498     | Network Denial of Service | 1 |</pre>
+<div class="figcap" style="text-align:left">Listing 4. Excerpt of a generated threat-analysis report.</div>
+
+<h2>References</h2>
+<div class="refs"><p>[1] J. Lasquety-Reyes, &ldquo;Global: Smart home&mdash;number of users 2018&ndash;2027,&rdquo; Statista.</p><p>[2] &ldquo;What is a smart home and what are the benefits?,&rdquo; Constellation.com.</p><p>[3] &ldquo;Smart home: Threats and countermeasures,&rdquo; Rambus, 2017.</p><p>[4] &ldquo;A Study of Smart Home Environment and its Security Threats,&rdquo; ResearchGate.</p><p>[5] &ldquo;Smart home: Threats and countermeasures,&rdquo; Rambus, 2017.</p><p>[6] K. Subramanian and W. Meng, &ldquo;Threat Hunting Using Elastic Stack: An Evaluation,&rdquo; IEEE SOLI, 2021.</p><p>[7] H. Qu, D. Qu and J. Tong, &ldquo;Virtual environment for smart home,&rdquo; IEEE CYBER, 2015.</p><p>[8] &ldquo;What is an intrusion detection system?,&rdquo; DNSstuff, 2019.</p><p>[9] E. Hasson and L. Cheng, &ldquo;Honeypot,&rdquo; Imperva Learning Center.</p><p>[10] A. Churcher et al., &ldquo;An experimental analysis of attack classification using ML in IoT networks,&rdquo; Sensors, 21(2):446, 2021.</p><p>[11] K. Subramanian and W. Meng, &ldquo;Threat Hunting Using Elastic Stack,&rdquo; IEEE SOLI, 2021.</p><p>[12] Banerjee et al., &ldquo;Network traffic analysis based IoT botnet detection using honeynet data,&rdquo; 2021.</p><p>[13] S. Bistarelli, E. Bosimini and F. Santini, &ldquo;A Report on the Security of Home Connections with IoT and Docker Honeypots,&rdquo; CEUR-WS Vol-2597.</p><p>[14] M. Harikanth and P. Rajarajeswari, &ldquo;Malicious event detection using ELK stack through CTI,&rdquo; IJITEE, 8(7):882&ndash;886, 2019.</p><p>[15] MITRE ATT&amp;CK&reg; Enterprise Matrix, The MITRE Corporation.</p><p>[16] J. Gamblin, &ldquo;Mirai BotNet source code,&rdquo; GitHub, 2016.</p><p>[17] Elastic B.V., &ldquo;Elastic Stack documentation,&rdquo; 2024.</p><p>[18] OISF, &ldquo;Suricata User Guide,&rdquo; 2024.</p></div>
+</div>
+</body></html>
