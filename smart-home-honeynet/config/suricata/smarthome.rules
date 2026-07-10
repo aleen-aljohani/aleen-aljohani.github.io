@@ -1,0 +1,40 @@
+# SmartHoneyNet — Suricata/Snort-compatible rule set for a smart-home segment.
+# These rules mirror the Python detection engine so the same logic can run at
+# the network layer in a full VM deployment (the "IDS VM" from the report).
+# SID range 9000000-9000099 is reserved for this project.
+
+# --- Telnet / SSH brute force against IoT devices ---
+alert tcp any any -> $HOME_NET 23 (msg:"SMARTHOME Telnet brute force / login flood"; \
+    flow:to_server; flags:S; threshold:type both, track by_src, count 5, seconds 60; \
+    classtype:attempted-admin; sid:9000001; rev:2;)
+
+alert tcp any any -> $HOME_NET 22 (msg:"SMARTHOME SSH brute force / login flood"; \
+    flow:to_server; flags:S; threshold:type both, track by_src, count 5, seconds 60; \
+    classtype:attempted-admin; sid:9000002; rev:2;)
+
+# --- Known IoT / Mirai default credentials seen in cleartext telnet ---
+alert tcp any any -> $HOME_NET 23 (msg:"SMARTHOME Mirai default credential xc3511"; \
+    content:"xc3511"; nocase; classtype:credential-theft; sid:9000010; rev:1;)
+alert tcp any any -> $HOME_NET 23 (msg:"SMARTHOME Mirai default credential vizxv"; \
+    content:"vizxv"; nocase; classtype:credential-theft; sid:9000011; rev:1;)
+
+# --- HTTP request flood (DoS) against the device web UI ---
+alert http any any -> $HOME_NET any (msg:"SMARTHOME HTTP request flood (possible DoS)"; \
+    flow:to_server; threshold:type both, track by_src, count 50, seconds 10; \
+    classtype:attempted-dos; sid:9000020; rev:2;)
+
+# --- IoT web-exploitation probes ---
+alert http any any -> $HOME_NET any (msg:"SMARTHOME IoT exploit probe /boaform"; \
+    flow:to_server; http.uri; content:"/boaform/"; nocase; \
+    classtype:web-application-attack; sid:9000030; rev:1;)
+alert http any any -> $HOME_NET any (msg:"SMARTHOME IoT exploit probe HNAP1"; \
+    flow:to_server; http.uri; content:"/HNAP1"; nocase; \
+    classtype:web-application-attack; sid:9000031; rev:1;)
+alert http any any -> $HOME_NET any (msg:"SMARTHOME path traversal attempt"; \
+    flow:to_server; http.uri; content:"../"; \
+    classtype:web-application-attack; sid:9000032; rev:1;)
+
+# --- Command injection / malware staging in HTTP ---
+alert http any any -> $HOME_NET any (msg:"SMARTHOME command injection wget/busybox"; \
+    flow:to_server; http.uri; pcre:"/;\s*(?:wget|curl|tftp|busybox|chmod)/i"; \
+    classtype:web-application-attack; sid:9000040; rev:1;)
