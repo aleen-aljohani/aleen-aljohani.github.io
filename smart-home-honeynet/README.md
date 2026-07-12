@@ -7,6 +7,10 @@ tested, containerised security platform** that deploys honeypots, an IDS and
 the ELK stack to hunt, detect and analyse attacks against smart-home / IoT
 networks — on a single host, in minutes.
 
+<p align="center">
+  <img src="docs/assets/architecture.png" alt="SmartHoneyNet system architecture" width="100%">
+</p>
+
 > ⚠️ **Ethics & scope.** Every component is designed for a **contained lab**.
 > The honeypots are low-interaction and never execute attacker input, and the
 > included attack simulators **refuse to target anything except loopback /
@@ -49,6 +53,31 @@ networks — on a single host, in minutes.
 | `PORT-SCAN` | reconnaissance | T1046 | Multi-port probing |
 | `SUSPICIOUS-HTTP-PATH` | active-scanning | T1595.002 | IoT exploit URLs (boaform, HNAP1, …) |
 | `CMD-INJECTION` | command-injection | T1059 | Shell payloads (`;wget`, `busybox`, …) |
+
+---
+
+## In action
+
+**End-to-end run** — `python3 -m honeynet demo` launches the honeypots, runs
+simulated attacks against them, detects and classifies the traffic, then
+generates a threat report:
+
+<p align="center">
+  <img src="docs/assets/demo-run.png" alt="SmartHoneyNet demo run output" width="90%">
+</p>
+
+**Tested** — 39 automated tests, ~90 % coverage, CI on Python 3.9 / 3.11 / 3.12:
+
+<p align="center">
+  <img src="docs/assets/tests-coverage.png" alt="pytest run with coverage" width="90%">
+</p>
+
+**Hybrid detection engine** — signature rules + rate-based anomaly windows,
+every alert mapped to MITRE ATT&CK:
+
+<p align="center">
+  <img src="docs/assets/detection-engine.png" alt="Detection engine source" width="90%">
+</p>
 
 ---
 
