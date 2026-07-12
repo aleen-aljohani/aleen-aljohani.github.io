@@ -1,0 +1,46 @@
+{
+  "index_patterns": ["honeynet-events-*", "honeynet-alerts-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp":      { "type": "date" },
+        "timestamp":       { "type": "date" },
+        "event_id":        { "type": "keyword" },
+        "alert_id":        { "type": "keyword" },
+        "honeypot":        { "type": "keyword" },
+        "event_type":      { "type": "keyword" },
+        "source_ip":       { "type": "ip" },
+        "source_port":     { "type": "integer" },
+        "dest_port":       { "type": "integer" },
+        "protocol":        { "type": "keyword" },
+        "session_id":      { "type": "keyword" },
+        "username":        { "type": "keyword" },
+        "password":        { "type": "keyword" },
+        "command":         { "type": "text", "fields": { "raw": { "type": "keyword", "ignore_above": 512 } } },
+        "http_method":     { "type": "keyword" },
+        "http_path":       { "type": "text", "fields": { "raw": { "type": "keyword", "ignore_above": 1024 } } },
+        "user_agent":      { "type": "text", "fields": { "raw": { "type": "keyword", "ignore_above": 512 } } },
+        "payload_size":    { "type": "long" },
+        "success":         { "type": "boolean" },
+        "rule_id":         { "type": "keyword" },
+        "category":        { "type": "keyword" },
+        "severity":        { "type": "keyword" },
+        "event_count":     { "type": "long" },
+        "mitre_technique": { "type": "keyword" },
+        "mitre_name":      { "type": "keyword" },
+        "description":     { "type": "text" },
+        "geo": {
+          "properties": {
+            "location":     { "type": "geo_point" },
+            "country_name": { "type": "keyword" },
+            "city_name":    { "type": "keyword" }
+          }
+        }
+      }
+    }
+  }
+}

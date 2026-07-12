@@ -1,0 +1,56 @@
+# SmartHoneyNet detection thresholds.
+# These values override the built-in defaults in honeynet.config.DetectionConfig.
+# If PyYAML is not installed this file is ignored and code defaults apply
+# (a JSON copy with the same keys would also work).
+
+# --- Brute force (rate-based) ---
+brute_force_threshold: 5      # failed logins from one source ...
+brute_force_window: 60        # ... within this many seconds -> alert
+
+# --- Denial of service (rate-based) ---
+dos_threshold: 50             # requests/connections from one source ...
+dos_window: 10                # ... within this many seconds -> alert
+
+# --- Port scan (rate-based) ---
+port_scan_threshold: 8        # distinct destination ports from one source ...
+port_scan_window: 30          # ... within this many seconds -> alert
+
+# Suppress duplicate alerts for the same (source, rule) for this many seconds.
+alert_cooldown: 30
+
+# --- Signature: known IoT / Mirai default credentials ---
+mirai_credentials:
+  - [root, xc3511]
+  - [root, vizxv]
+  - [root, admin]
+  - [admin, admin]
+  - [root, root]
+  - [root, "12345"]
+  - [guest, guest]
+  - [admin, password]
+  - [root, "888888"]
+  - [support, support]
+  - [admin, "1234"]
+  - [root, default]
+
+# --- Signature: suspicious IoT web-exploitation paths (regex) ---
+suspicious_http_patterns:
+  - "/cgi-bin/"
+  - "\\.\\./"
+  - "/boaform/"
+  - "/HNAP1"
+  - "/setup\\.cgi"
+  - "/shell"
+  - "/wget"
+  - "/GponForm/"
+  - "/dvr"
+  - "/(?:etc/passwd|proc/self)"
+
+# --- Signature: command-injection payloads (regex) ---
+injection_patterns:
+  - ";\\s*(?:wget|curl|tftp|busybox|chmod|sh)\\b"
+  - "\\|\\s*sh\\b"
+  - "`[^`]+`"
+  - "\\$\\([^)]+\\)"
+  - "&&\\s*\\w+"
+  - "/bin/(?:busybox|sh)\\b"
