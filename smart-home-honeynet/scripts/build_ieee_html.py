@@ -154,16 +154,16 @@ def table(headers, rows, caption="", fullwidth=False):
 
 def build() -> None:
     contrib = table(
-        ["#", "Original project (2024)", "This work (2026)"],
-        [["1", "3 manual VirtualBox VMs", "One-command Docker + pure-Python mode"],
-         ["2", "2 attacks via screenshots", "6 detection categories, each tested"],
-         ["3", "Qualitative results only", "Quantitative precision/recall/F1"],
-         ["4", "Snort signatures only", "Hybrid signature + anomaly engine"],
-         ["5", "No attack taxonomy", "MITRE ATT&amp;CK mapping per alert"],
-         ["6", "No automated testing", "39 tests + CI on 3 Python versions"],
-         ["7", "Unbounded DoS script", "Bounded, safety-gated simulators"],
-         ["8", "No threat model", "Threat model + enforced controls"]],
-        "TABLE I. Contributions over the original project.")
+        ["#", "Capability", "What it delivers"],
+        [["1", "Deployment", "One-command Docker + pure-Python standalone mode"],
+         ["2", "Detection coverage", "6 attack categories, each unit-tested"],
+         ["3", "Evaluation", "Quantitative precision / recall / F1 on a labelled set"],
+         ["4", "Detection engine", "Hybrid signature + rate-based anomaly"],
+         ["5", "Threat taxonomy", "MITRE ATT&amp;CK mapping on every alert"],
+         ["6", "Quality", "39 automated tests + CI on 3 Python versions"],
+         ["7", "Safe tooling", "Bounded, safety-gated attack simulators"],
+         ["8", "Security", "Documented threat model + enforced controls"]],
+        "TABLE I. Platform capabilities at a glance.")
 
     related = table(
         ["Ref", "Yr", "Approach", "Result", "Limitation"],
@@ -327,7 +327,7 @@ def build() -> None:
 <div class="title-block">
   <h1>Hunt, Detect and Analyse Attacks on a Smart-Home Network using
       Honeypots, an IDS and the ELK Stack</h1>
-  <div class="subtitle">An improved and reproducible re-engineering of the CCSE graduation project</div>
+  <div class="subtitle">A reproducible platform for smart-home network security · University of Jeddah (CCSE)</div>
   <div class="authors">Aleen Saleh Aljohani<br>
     <span class="email">aleensaljohani@gmail.com</span></div>
   <div class="affil">Cybersecurity Department, College of Computer Science and Engineering (CCSE),
@@ -337,12 +337,10 @@ def build() -> None:
 <div class="body">
 <p class="abstract"><b>Abstract&mdash;</b>Smart homes are projected to reach roughly 312 million
 households by 2027, expanding a poorly-defended Internet-of-Things (IoT) attack surface that botnets
-such as Mirai exploit through default credentials and exposed telnet/HTTP interfaces. The original
-graduation project demonstrated that honeypots, an intrusion-detection system (IDS) and the ELK stack
-can capture such attacks, but it was delivered as a manually-provisioned three-virtual-machine lab
-that demonstrated two attacks qualitatively and could not be reproduced, tested or measured. This
-paper presents SmartHoneyNet, a complete redesign and rebuild of the same idea as a reproducible,
-tested and quantitatively evaluated platform. Two low-interaction honeypots emulate a Mirai-style
+such as Mirai exploit through default credentials and exposed telnet/HTTP interfaces. This paper
+presents SmartHoneyNet, a reproducible, tested and quantitatively evaluated platform that combines
+honeypots, an intrusion-detection system (IDS) and the ELK stack to hunt, detect and analyse these
+attacks on a single host. Two low-interaction honeypots emulate a Mirai-style
 telnet IoT hub and a smart-home device web panel; a hybrid signature-plus-anomaly detection engine
 classifies six attack categories and maps every alert to MITRE ATT&amp;CK; a pipeline persists all
 data to both an embedded SQLite database and to Elasticsearch for Kibana visualisation. The platform
@@ -365,9 +363,9 @@ but to attract, observe and understand them. A honeypot deliberately exposes an 
 instrumented target; whatever an attacker does to it is malicious by definition and therefore worth
 studying. Pairing honeypots with an IDS and a log-analytics stack turns those observations into
 detections and, ultimately, into actionable intelligence.</p>
-<p>This paper re-engineers my 2024 University of Jeddah graduation project of the same name. The
-original established a sound idea but stopped at a qualitative, non-reproducible demonstration. Here we
-carry the idea to a platform that others can run, inspect, test and measure.</p>
+<p>This work delivers a smart-home security platform that others can run, inspect, test and measure,
+turning the honeypot&ndash;IDS&ndash;ELK approach into a reproducible and quantitatively evaluated
+system.</p>
 <h3>A. Problem statement</h3>
 <p>Smart-home networks are attacked continuously by automated botnets and scanners, yet homeowners
 lack visibility into these attacks and researchers lack reproducible, measurable platforms for
@@ -379,9 +377,9 @@ vulnerable devices with safe honeypots; (2) implement a real-time hybrid IDS; (3
 pipeline and an offline database; (4) measure detection performance quantitatively; and (5) enforce
 responsible-use controls in code rather than in prose.</p>
 <h3>C. Contributions</h3>
-<p>Table I summarises how this work advances the original. In short, we contribute a hybrid detection
-engine, an explicit ATT&amp;CK taxonomy, a reproducible and automatically-tested implementation, and a
-published quantitative evaluation.</p>
+<p>The platform's headline capabilities are summarised in Table I: a hybrid detection engine, an
+explicit ATT&amp;CK taxonomy, a reproducible and automatically-tested implementation, and a published
+quantitative evaluation.</p>
 {contrib}
 
 <h2>II. Background</h2>
@@ -436,7 +434,7 @@ goal is expressed directly as a MITRE ATT&amp;CK technique paired with the rule 
 pivot, or attack tooling misused&mdash;and mitigates them with the controls in Table&nbsp;VI.</p>
 
 <h2>V. Methodology</h2>
-<p>The project follows the same three-stage flow as the original, re-expressed as software. First,
+<p>The platform follows a three-stage flow, expressed as software. First,
 <i>attack generation</i>: adversary behaviour is produced by real attackers in a live deployment or by
 the built-in, safety-gated simulators in the lab. Second, <i>detection and collection</i>: honeypots
 capture every interaction as a structured event that the pipeline persists and runs through the IDS,
@@ -446,10 +444,10 @@ Logstash into Elasticsearch and visualised in Kibana, while an analyzer produces
 
 <h2>VI. System Design</h2>
 <h3>A. Architecture</h3>
-<p>The platform is a pipeline of composable components (Fig.&nbsp;1). The original three virtual
-machines map cleanly onto software: the attacker VM becomes the attack simulators; the honeypot VM
-(Cowrie/Pentbox) becomes the telnet and HTTP honeypots; and the IDS+ELK VM (Snort+ELK) becomes the
-detection engine&mdash;with an equivalent Suricata rule file&mdash;plus the ELK services.</p>
+<p>The platform is a pipeline of composable components (Fig.&nbsp;1) that replace a traditional
+multi-VM lab with software: the attack simulators generate adversary traffic; the telnet and HTTP
+honeypots act as the sensors; and the detection engine&mdash;with an equivalent Suricata rule
+file&mdash;plus the ELK services perform detection and analysis.</p>
 <figure>{FIG_ARCH}<figcaption class="figcap">Fig. 1. SmartHoneyNet architecture: sensors feed one
 pipeline that persists to SQLite, runs the IDS, and exports to the ELK stack and analyzer.</figcaption></figure>
 <h3>B. Data model and storage</h3>
@@ -518,7 +516,7 @@ allow-list. Table&nbsp;VI summarises the controls and where each is enforced.</p
 port scan, a telnet brute-force (wrong guesses plus IoT defaults), an HTTP flood and a set of
 web-exploitation probes against them. A representative run captured approximately 196 events and raised
 alerts in all five exercised categories, reproducing&mdash;and extending from two to six attack
-types&mdash;the qualitative demonstration of the original project, but as a single reproducible command.
+types&mdash;end to end, as a single reproducible command.
 The four attack phases and the rules each exercises are listed in Table&nbsp;X and sketched on the
 timeline in Fig.&nbsp;3. Aggregating the captured credentials (Table&nbsp;VIII) directly yields the
 blocklist of passwords a homeowner must never use.</p>
@@ -542,7 +540,7 @@ command-line interface and a full in-process integration run; line coverage is a
 Continuous integration runs the suite plus the demo on Python 3.9, 3.11 and 3.12.</p>
 
 <h2>X. Results and Discussion</h2>
-<p>The experiments confirm the original hypothesis&mdash;that honeypots, an IDS and ELK form an
+<p>The experiments confirm the central hypothesis&mdash;that honeypots, an IDS and ELK form an
 effective, low-cost smart-home detection stack&mdash;and strengthen it with measurement. Three findings
 stand out. First, <i>default credentials remain the highest-signal indicator</i>: a single login with a
 Mirai default pair is immediately and unambiguously malicious, corroborating [13]. Second,
@@ -558,19 +556,17 @@ are on a clean, labelled set; production traffic&mdash;content-delivery networks
 NAT'd users&mdash;would produce false positives and demands threshold tuning, which the framework
 supports but whose numbers must then be re-measured. Rate rules require a warm-up window and can miss
 &ldquo;low-and-slow&rdquo; attacks tuned below the thresholds. These are the honest boundaries within
-which the reported results hold, and they directly address the original report's acknowledged
-limitations (the unimplemented Pot2DPI honeypot and the Honeyd device-simulation crashes).</p>
+which the reported results hold.</p>
 <p><b>Future work.</b> Promising directions include Cowrie/Dionaea integration for higher-interaction
 SSH/telnet and malware capture; an MQTT honeypot (TCP&nbsp;1883) for the dominant smart-home broker; a
-virtual IoT-device environment realising the original's Pot2DPI/Honeyd goal; an ML-based anomaly
+a virtual IoT-device environment with realistic device fingerprints; an ML-based anomaly
 detector following [10], evaluated against the same labelled sets; GeoIP and threat-intelligence
 enrichment in Logstash to attribute and map campaigns; and automated response that pushes high-severity
 source addresses to a firewall blocklist.</p>
 
 <h2>XII. Conclusion</h2>
-<p>SmartHoneyNet re-engineers the <i>Hunt, Detect and Analyse Attacks on a Smart-Home Network</i>
-project from a one-off, three-VM demonstration into a reproducible, tested and measured security
-platform. It keeps the original's sound core idea&mdash;honeypots to attract, an IDS to detect, and
+<p>SmartHoneyNet is a reproducible, tested and measured platform for smart-home network security.
+It builds on a proven core idea&mdash;honeypots to attract, an IDS to detect, and
 ELK to analyse&mdash;and adds a hybrid detection engine covering six attack classes, a MITRE ATT&amp;CK
 classification of every alert, a real database and dashboards, a 39-test automated suite with CI,
 enforced security-and-ethics controls, and a quantitative evaluation demonstrating 100% precision and

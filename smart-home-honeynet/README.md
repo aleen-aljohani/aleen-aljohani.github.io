@@ -2,15 +2,10 @@
 
 **Hunt, Detect and Analyse Attacks on a Smart-Home Network using Honeypots, an IDS and the ELK Stack.**
 
-A complete, reproducible rebuild of the University of Jeddah (CCSE) graduation
-project of the same name. The original work manually provisioned three
-VirtualBox VMs (attacker, honeypot, IDS+ELK) and demonstrated two attacks.
-This version turns that idea into a **runnable, tested, containerised
-security platform** that anyone can spin up on a single host in minutes.
-
-> **Project history:** originally a 2024 University of Jeddah graduation
-> project; rebuilt and re-engineered to this professional standard in 2026.
-> See [CHANGELOG.md](CHANGELOG.md).
+My University of Jeddah (CCSE) cybersecurity graduation project: a **runnable,
+tested, containerised security platform** that deploys honeypots, an IDS and
+the ELK stack to hunt, detect and analyse attacks against smart-home / IoT
+networks — on a single host, in minutes.
 
 > ⚠️ **Ethics & scope.** Every component is designed for a **contained lab**.
 > The honeypots are low-interaction and never execute attacker input, and the

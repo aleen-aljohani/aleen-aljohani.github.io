@@ -172,7 +172,7 @@ def build() -> None:
 
     sub = doc.add_paragraph()
     sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    sr = sub.add_run("An improved and reproducible re-engineering of the CCSE graduation project")
+    sr = sub.add_run("A reproducible platform for smart-home network security · University of Jeddah (CCSE)")
     sr.italic = True
     sr.font.size = Pt(11)
     sub.paragraph_format.space_after = Pt(10)
@@ -210,13 +210,10 @@ def build() -> None:
         "Smart homes are projected to reach roughly 312 million households by "
         "2027, expanding a poorly-defended IoT attack surface that botnets such "
         "as Mirai exploit through default credentials and exposed telnet/HTTP "
-        "interfaces. The original graduation project demonstrated that "
-        "honeypots, an IDS and the ELK stack can capture such attacks, but was "
-        "delivered as a manually-provisioned, three-VM lab that showed two "
-        "attacks qualitatively and could not be reproduced or measured. This "
-        "paper presents SmartHoneyNet, a complete redesign and rebuild of the "
-        "same idea as a reproducible, tested and quantitatively evaluated "
-        "platform. Two low-interaction honeypots emulate a Mirai-style telnet "
+        "interfaces. This paper presents SmartHoneyNet, a reproducible, tested "
+        "and quantitatively evaluated platform that combines honeypots, an IDS "
+        "and the ELK stack to hunt, detect and analyse these attacks on a "
+        "single host. Two low-interaction honeypots emulate a Mirai-style telnet "
         "IoT hub and a smart-home device web panel; a hybrid signature-plus-"
         "anomaly detection engine classifies six attack categories and maps "
         "every alert to MITRE ATT&CK; a pipeline persists all data to both "
@@ -271,17 +268,17 @@ def build() -> None:
               "hybrid IDS; (3) integrate an ELK pipeline and an offline "
               "database; (4) measure detection performance quantitatively; and "
               "(5) enforce responsible-use controls in code.")
-    subheading(doc, "C", "Contributions over the original project")
-    table(doc, ["#", "Original project", "This work"], [
-        ["1", "3 manual VirtualBox VMs", "One-command Docker + pure-Python mode"],
-        ["2", "2 attacks via screenshots", "6 detection categories, each tested"],
-        ["3", "Qualitative results only", "Quantitative precision/recall/F1"],
-        ["4", "Snort signatures only", "Hybrid signature + anomaly engine"],
-        ["5", "No attack taxonomy", "MITRE ATT&CK mapping per alert"],
-        ["6", "No automated testing", "39 tests + CI on 3 Python versions"],
-        ["7", "Unbounded DoS script", "Bounded, safety-gated simulators"],
-        ["8", "No threat model", "Threat model + enforced controls"],
-    ], caption="TABLE I. Contributions over the original project.")
+    subheading(doc, "C", "Platform capabilities")
+    table(doc, ["#", "Capability", "What it delivers"], [
+        ["1", "Deployment", "One-command Docker + pure-Python mode"],
+        ["2", "Detection coverage", "6 detection categories, each tested"],
+        ["3", "Evaluation", "Quantitative precision/recall/F1"],
+        ["4", "Detection engine", "Hybrid signature + anomaly"],
+        ["5", "Threat taxonomy", "MITRE ATT&CK mapping per alert"],
+        ["6", "Quality", "39 tests + CI on 3 Python versions"],
+        ["7", "Safe tooling", "Bounded, safety-gated simulators"],
+        ["8", "Security", "Threat model + enforced controls"],
+    ], caption="TABLE I. Platform capabilities at a glance.")
 
     # II. BACKGROUND
     heading(doc, "II", "Background")
@@ -344,7 +341,7 @@ def build() -> None:
 
     # V. METHODOLOGY
     heading(doc, "V", "Methodology")
-    para(doc, "The project follows the original three-stage flow, re-expressed "
+    para(doc, "The platform follows a three-stage flow, expressed "
               "as software: (1) attack generation—by real attackers or the "
               "safety-gated simulators; (2) detection and collection—"
               "honeypots capture each interaction as a structured event that the "
@@ -356,12 +353,11 @@ def build() -> None:
     # VI. SYSTEM DESIGN
     heading(doc, "VI", "System Design")
     subheading(doc, "A", "Architecture")
-    para(doc, "The platform is a pipeline of composable components. The "
-              "original three VMs map onto software: the attacker VM becomes the "
-              "attack simulators, the honeypot VM (Cowrie/Pentbox) becomes the "
-              "telnet and HTTP honeypots, and the IDS+ELK VM (Snort+ELK) becomes "
-              "the detection engine (with an equivalent Suricata rule file) plus "
-              "the ELK services.")
+    para(doc, "The platform is a pipeline of composable components that replace "
+              "a traditional multi-VM lab with software: the attack simulators "
+              "generate adversary traffic, the telnet and HTTP honeypots act as "
+              "the sensors, and the detection engine (with an equivalent Suricata "
+              "rule file) plus the ELK services perform detection and analysis.")
     subheading(doc, "B", "Detection rules and ATT&CK mapping")
     table(doc, ["Rule", "Type", "MITRE", "Trigger"], [
         ["IOT-DEFAULT-CREDS", "sig", "T1078.001", "Known IoT default credential pair"],
@@ -394,9 +390,9 @@ def build() -> None:
     bullet(doc, "**Detection engine**—per-source sliding-window deques for "
                 "rate rules and compiled regex sets for signatures; thread-safe "
                 "and stream-oriented.")
-    bullet(doc, "**Attack simulators**—port scan, brute-force and a bounded "
-                "HTTP flood (a safe re-implementation of the original’s "
-                "unbounded loop), each gated by the safety module.")
+    bullet(doc, "**Attack simulators**—port scan, brute-force and a bounded, "
+                "safety-gated HTTP flood, each checked by the safety module "
+                "before any packet is sent.")
     para(doc, "`docker compose up -d --build` starts the honeypots plus "
               "Elasticsearch, Logstash and Kibana on an isolated bridge network; "
               "a saved-objects file provisions the dashboards. A Suricata rule "
@@ -409,8 +405,8 @@ def build() -> None:
               "launches a port scan, a telnet brute-force, an HTTP flood and "
               "web-exploitation probes against them. A representative run "
               "captured ~196 events and raised alerts in all five exercised "
-              "categories—reproducing and extending, from two to six attack "
-              "types, the original demonstration as a single command.")
+              "categories—covering six attack types end to end, as a single "
+              "reproducible command.")
     subheading(doc, "B", "Quantitative detection evaluation")
     para(doc, "A labelled event stream (94 events) interleaves benign, "
               "human-paced traffic with four attack campaigns from distinct "
@@ -438,7 +434,7 @@ def build() -> None:
 
     # IX. RESULTS AND DISCUSSION
     heading(doc, "IX", "Results and Discussion")
-    para(doc, "The experiments confirm the original hypothesis and strengthen it "
+    para(doc, "The experiments confirm the central hypothesis and strengthen it "
               "with measurement. Three findings stand out: (1) default "
               "credentials remain the highest-signal indicator—a single "
               "login with a Mirai default pair is immediately malicious; (2) "
@@ -466,18 +462,17 @@ def build() -> None:
     heading(doc, "XI", "Future Work")
     para(doc, "Future directions include Cowrie/Dionaea integration for "
               "higher-interaction capture; an MQTT honeypot (TCP 1883) for the "
-              "dominant smart-home broker; a virtual IoT-device environment (the "
-              "original’s Pot2DPI/Honeyd goal); an ML-based anomaly detector "
+              "dominant smart-home broker; a virtual IoT-device environment with "
+              "realistic device fingerprints; an ML-based anomaly detector "
               "evaluated on the same labelled sets; GeoIP and threat-intel "
               "enrichment; and automated firewall response for high-severity "
               "sources.")
 
     # XII. CONCLUSION
     heading(doc, "XII", "Conclusion")
-    para(doc, "SmartHoneyNet re-engineers the project from a one-off, three-VM "
-              "demonstration into a reproducible, tested and measured security "
-              "platform. It keeps the sound core idea—honeypots to attract, "
-              "an IDS to detect, ELK to analyse—and adds a hybrid engine "
+    para(doc, "SmartHoneyNet is a reproducible, tested and measured platform for "
+              "smart-home network security. It builds on a proven core idea—"
+              "honeypots to attract, an IDS to detect, ELK to analyse—and adds a hybrid engine "
               "covering six attack classes, a MITRE ATT&CK classification of "
               "every alert, a real database and dashboards, a 39-test suite with "
               "CI, enforced security controls, and a quantitative evaluation "

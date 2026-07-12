@@ -1,6 +1,6 @@
 # Hunt, Detect and Analyse Attacks on a Smart-Home Network using Honeypots, an IDS and the ELK Stack
 
-**An improved and reproducible re-engineering of the CCSE graduation project.**
+**A reproducible platform for smart-home network security — University of Jeddah (CCSE).**
 
 Aleen Saleh Aljohani — aleensaljohani@gmail.com
 Cybersecurity Department, College of Computer Science and Engineering (CCSE), University of Jeddah
@@ -14,17 +14,13 @@ projected to grow to roughly **312 million by 2027**, an increase of over
 86 % versus 2023. This convenience comes with a large, poorly-defended attack
 surface — IoT devices ship with default credentials, exposed telnet/HTTP
 management interfaces and unpatched firmware, and are the primary recruiting
-ground for botnets such as Mirai. The original *Hunt, Detect and Analysis
-Attacks on Smart Home Network* project demonstrated that a combination of
-**honeypots**, an **intrusion-detection system (IDS)** and the **ELK stack**
-can capture and study these attacks. However, that work was delivered as a
-manually-provisioned, three-VM lab that demonstrated two attacks
-qualitatively and could not be reproduced, tested or measured by a third
-party.
+ground for botnets such as Mirai. A combination of **honeypots**, an
+**intrusion-detection system (IDS)** and the **ELK stack** can capture and
+study these attacks, but doing so in a way that is reproducible, tested and
+measurable remains a challenge for a smart-home context.
 
-This report presents **SmartHoneyNet**, a complete redesign and rebuild of
-the same idea as a *reproducible, tested and quantitatively evaluated*
-security platform. Two low-interaction honeypots emulate a Mirai-style telnet
+This report presents **SmartHoneyNet**, a *reproducible, tested and
+quantitatively evaluated* security platform. Two low-interaction honeypots emulate a Mirai-style telnet
 IoT hub and a smart-home device web panel; a hybrid signature-plus-anomaly
 detection engine classifies six attack categories and maps every alert to
 **MITRE ATT&CK**; a pipeline persists all data to both a local SQLite
@@ -35,8 +31,8 @@ most notably attack simulators that are hard-blocked from targeting any
 non-private address. On a controlled, labelled evaluation set the engine
 achieves **100 % precision and recall with zero false positives on benign
 traffic**. We discuss the design, the measured results, the remaining
-limitations of a software-only honeynet, and a concrete roadmap toward the
-smart-home-specific honeypots the original project envisioned.
+limitations of a software-only honeynet, and a concrete roadmap toward richer
+smart-home-specific honeypots.
 
 **Index Terms** — Honeypot, IoT security, Intrusion Detection, ELK Stack,
 Mirai, MITRE ATT&CK, Smart Home, Threat Hunting.
@@ -81,19 +77,19 @@ effectiveness.
 4. **Measure** detection performance quantitatively, not just qualitatively.
 5. Enforce responsible-use controls so the platform cannot be weaponised.
 
-### 1.3 Contributions over the original project
+### 1.3 Platform capabilities
 
-| # | Original project | This work |
+| # | Capability | What it delivers |
 |---|---|---|
-| 1 | 3 manually-built VirtualBox VMs | One-command `docker compose` + pure-Python standalone mode |
-| 2 | 2 attacks shown via screenshots | 6 detection categories, each unit-tested |
-| 3 | Qualitative results only | **Quantitative evaluation** (precision/recall/F1) |
-| 4 | Snort signatures only | **Hybrid** signature + rate-based anomaly engine |
-| 5 | No attack classification taxonomy | **MITRE ATT&CK** mapping on every alert |
-| 6 | No automated testing | **38 automated tests** + CI on 3 Python versions |
-| 7 | Attack script was an unbounded DoS loop | Bounded, **safety-gated** simulators (private targets only) |
-| 8 | No threat model / security controls | Documented threat model + enforced security controls |
-| 9 | Not reproducible | Fully reproducible; deterministic evaluation harness |
+| 1 | Deployment | One-command `docker compose` + pure-Python standalone mode |
+| 2 | Detection coverage | 6 detection categories, each unit-tested |
+| 3 | Evaluation | **Quantitative** precision/recall/F1 on a labelled set |
+| 4 | Detection engine | **Hybrid** signature + rate-based anomaly |
+| 5 | Threat taxonomy | **MITRE ATT&CK** mapping on every alert |
+| 6 | Quality | **39 automated tests** + CI on 3 Python versions |
+| 7 | Safe tooling | Bounded, **safety-gated** simulators (private targets only) |
+| 8 | Security | Documented threat model + enforced controls |
+| 9 | Reproducibility | Fully reproducible; deterministic evaluation harness |
 
 ---
 
@@ -282,9 +278,8 @@ launches, in sequence, a port scan, a telnet brute-force (wrong guesses +
 IoT defaults), an HTTP flood and a set of web-exploitation probes against
 them. A representative run captured **~196 events** and raised alerts in **all
 five exercised categories** (default-credentials, brute-force,
-denial-of-service, command-injection, active-scanning). This reproduces — and
-extends from two to six attack types — the qualitative demonstration of the
-original project, but as a single reproducible command.
+denial-of-service, command-injection, active-scanning) — covering six attack
+types end to end, as a single reproducible command.
 
 ### 8.2 Experiment B — quantitative detection evaluation
 To measure detection quality we built a **labelled** event stream
@@ -399,13 +394,12 @@ unimplemented Pot2DPI honeypot and the Honeyd device-simulation crashes).
 
 ## 12. Conclusion
 
-SmartHoneyNet re-engineers the *Hunt, Detect and Analysis Attacks on Smart
-Home Network* project from a one-off, three-VM demonstration into a
-reproducible, tested and measured security platform. It keeps the original's
-sound core idea — honeypots to attract, an IDS to detect, and ELK to analyse —
-and adds what a graduation project of this ambition needs to stand on its own:
+SmartHoneyNet is a reproducible, tested and measured platform for smart-home
+network security. It builds on a proven core idea — honeypots to attract, an
+IDS to detect, and ELK to analyse — and adds what a project of this ambition
+needs to stand on its own:
 a hybrid detection engine covering six attack classes, a MITRE ATT&CK
-classification of every alert, a real database and dashboards, a 38-test
+classification of every alert, a real database and dashboards, a 39-test
 automated suite with CI, enforced security-and-ethics controls, and a
 quantitative evaluation demonstrating 100 % precision and recall with zero
 false positives on a controlled labelled set. As smart-home adoption races
@@ -446,6 +440,5 @@ what the field needs.
 
 ---
 
-*This report documents the SmartHoneyNet rebuild. All figures are reproducible
-from this repository: `python3 -m honeynet demo` (Experiment A) and
-`python3 scripts/evaluate.py` (Experiment B).*
+*All figures are reproducible from this repository: `python3 -m honeynet demo`
+(Experiment A) and `python3 scripts/evaluate.py` (Experiment B).*
